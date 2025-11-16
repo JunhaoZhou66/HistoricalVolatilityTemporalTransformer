@@ -7,7 +7,7 @@ import os
 import requests 
 import nltk
 from nltk.corpus import words
-
+from collections import Counter # <-- 1. Import Counter
 try:
     nltk.data.find('corpora/words')
 except:
@@ -56,29 +56,25 @@ def clean_html_tags(input_file_path, output_file_path):
 
     initial_tokens = raw_html.split()
     initial_count = len(initial_tokens)
+    
+    # 1. STEP 1: Remove Style blocks and attributes
     style_block_pattern = re.compile(r'<style.*?>(.*?)</style>', re.DOTALL | re.IGNORECASE)
     intermediate_html = re.sub(style_block_pattern, ' ', raw_html)
     
-    # Pattern 2: Remove inline style attributes (non-greedy)
-    # This targets attributes like style="..." inside any tag.
     style_attr_pattern = re.compile(r'style=".*?"', re.IGNORECASE)
     intermediate_html = re.sub(style_attr_pattern, ' ', intermediate_html)
     
-    # -----------------------------------------------------------------
-    # 2. STEP 2 (Original Step 1): Remove remaining HTML/XML/SVG Tags
-    # -----------------------------------------------------------------
+    # 2. STEP 2: Remove remaining HTML/XML/SVG Tags
     tag_pattern = re.compile('<.*?>')
     cleaned_text_no_tags = re.sub(tag_pattern, ' ', intermediate_html)
 
-    # 3. STEP 3 (Original Step 2): Remove Punctuation/Numbers and Lowercase
+    # 3. STEP 3: Remove Punctuation/Numbers and Lowercase
     cleaned_text_final_str = re.sub(r'[^a-zA-Z\s]', ' ', cleaned_text_no_tags).lower()
     
-    # 4. STEP 4 (Original Step 3): Apply Word-Level Filtering
-    cleaned_text_final_str = re.sub(r'[^a-zA-Z\s]', ' ', cleaned_text_no_tags).lower()
+    # 4. STEP 4: Apply Word-Level Filtering
     potential_words = cleaned_text_final_str.split()
 
     cleaned_text_list = []
-    # Initialize a variable to track the last word that was successfully added
     previous_word = None 
 
     for word in potential_words:
@@ -89,15 +85,19 @@ def clean_html_tags(input_file_path, output_file_path):
             is_english_word = word in ENGLISH_WORDS
             is_ticker_symbol = word in TICKER_SYMBOLS
             is_html_symbol = word in HTML_ATTRIBUTE_STOP_WORDS
+            
             # Check 1: Must be a meaningful word (English OR Ticker) AND not HTML noise
             if (is_english_word or is_ticker_symbol) and not is_html_symbol:
                 if word != previous_word:
                     cleaned_text_list.append(word)
-        
                     previous_word = word
+                    
+    # 5. STEP 5: Write output
     output_content = '\n'.join(cleaned_text_list)
     with open(output_file_path, 'w', encoding='utf-8') as f:
         f.write(output_content)
+        
+    # 6. STEP 6: Report Metrics
     final_count = len(cleaned_text_list)
     removed_count = initial_count - final_count
 
@@ -107,8 +107,26 @@ def clean_html_tags(input_file_path, output_file_path):
     print(f"2. Items (approx.) removed by all masks: {removed_count}")
     print(f"3. Total items (pure words, filtered) after masking: {final_count}")
     print(f"Cleaned output saved to: {output_file_path}")
-    print("-" * 40)
 
+    # --- 7. NEW: Percent Frequency Counting ---
+    if final_count > 0: # Avoid division by zero
+        print("\n--- Top 50 Word Frequencies ---")
+        
+        # Create the frequency counter
+        word_counts = Counter(cleaned_text_list)
+        
+        # Get the 50 most common
+        top_50_words = word_counts.most_common(50)
+        
+        # Print them in a formatted table
+        print(f"{'Rank':<5} {'Word':<20} {'Count':<8} {'Frequency':<10}")
+        print(f"{'-'*4:<5} {'-'*19:<20} {'-'*7:<8} {'-'*9:<10}")
+        
+        for i, (word, count) in enumerate(top_50_words, 1):
+            percent = (count / final_count) * 100
+            print(f"{i:<5} {word:<20} {count:<8} {percent:>9.2f}%")
+            
+    print("-" * 40)
 
 
 if __name__ == "__main__":
