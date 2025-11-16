@@ -121,6 +121,7 @@ def print_frequency_report(title, counter, total_tokens):
     print("-" * 40)
 
 
+
 # --- 3. Main Execution ---
 
 if __name__ == "__main__":
@@ -225,18 +226,14 @@ if __name__ == "__main__":
             batch_noise_counter,
             total_batch_noise_tokens
         )
-        # --- End of Batch Loop ---
 
-    # --- 5. Final Report (All Batches) ---
     if pending_items:
         print(f"\n--- WARNING ---")
         print(f"{len(pending_items)} URLs failed all attempts and were not processed.")
-        # You could save these to a file for review
-    
+
     print_frequency_report(
         "=== Final Aggregate Noise Report (All Batches) ===",
         aggregate_noise_counter,
         total_aggregate_noise_tokens
     )
 
-    print("\nProcess finished.")
